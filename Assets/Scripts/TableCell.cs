@@ -6,34 +6,30 @@ using UnityEngine.EventSystems;
 public class TableCell : MonoBehaviour, IPointerEnterHandler
 {
     public static event System.Action<TableCell> onCellEnter;
+    public static event System.Action<TableCell> onTileChanged;
     public bool isOccupied
     {
-        get => tileAttached != null;
+        get { return tileAttached != null; }
     }
     public bool isTileSetCorrectly
     {
-        get => tileAttached?.index == tileIndex;
+        get { return tileAttached?.index == tileIndex; }
     }
 
-    static int totalCount;
+    static int totalCount = 0;
     int tileIndex;
     Tile tileAttached;
 
-
-    public TableCell()
+    
+    void Start()
     {
         tileIndex = totalCount;
         totalCount++;
-    }
-
-    void Start()
-    {
         GetComponent<Canvas>().worldCamera = Camera.main;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        //Debug.Log($"{name} entered");
         if (!isOccupied && onCellEnter != null) onCellEnter(this);
     }
 
@@ -41,20 +37,16 @@ public class TableCell : MonoBehaviour, IPointerEnterHandler
     {
         if (tileAttached != null) return false;
         tileAttached = tile;
-        tile.transform.SetAsLastSibling();
-        onCellEnter?.Invoke(this);
-
-        Debug.LogError("attt" + this );
+        tile.transform.SetAsFirstSibling();
+        onTileChanged?.Invoke(this);
         return true;
     }
 
     public void DetachTile(Tile tile)
     {
-        if (tile.Equals(tileAttached))
-        {
-            tileAttached = null;
-            Debug.Log("detached" + this);
-        }
+        if (!tile.Equals(tileAttached)) return;
+        tileAttached = null;
+        onTileChanged?.Invoke(this);
     }
 
     public override string ToString()

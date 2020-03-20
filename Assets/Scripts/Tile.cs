@@ -8,6 +8,7 @@ public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDown
 {
     public int index { get; private set; }
     Canvas canvas;
+    Image image;
     TableCell enteredCell, homeCell;
     float cellBindingDist = 0.15f;
 
@@ -18,20 +19,23 @@ public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDown
         index = int.Parse(indexStr);
         TableCell.onCellEnter += TableCell_OnCellEnter;
         canvas = GetComponent<Canvas>();
+        image = GetComponent<Image>();
     }
 
     public void OnDrag(PointerEventData data)
     {
         var pointerWorldPos = Camera.main.ScreenToWorldPoint(data.position);
-        if (CanBindToCell(transform.position)) SetPosition(enteredCell.transform.position);
+        pointerWorldPos.z = 0;
+        if (CanBindToCell(pointerWorldPos)) SetPosition(enteredCell.transform.position);
         else SetPosition(pointerWorldPos);
     }
 
     bool CanBindToCell(Vector3 pointerPos)
     {
-        var result = enteredCell != null && !enteredCell.isOccupied &&
-            (enteredCell.transform.position - pointerPos).magnitude < cellBindingDist;
-        return result;
+        if (enteredCell == null || enteredCell.isOccupied) return false;
+        var asdf = enteredCell.transform.parent.TransformPoint(pointerPos);
+        var tileToCellDist = (enteredCell.transform.position - pointerPos).magnitude;  
+        return tileToCellDist < cellBindingDist;
     }
 
     void SetPosition(Vector2 position)
@@ -46,17 +50,18 @@ public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDown
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        Debug.Log("tile up");
-        Debug.Log(enteredCell);
-        if (CanBindToCell(transform.position) && enteredCell != null &&
-            enteredCell.AttachTile(this)) homeCell = enteredCell;
-        canvas.sortingOrder = 2;
+        if (CanBindToCell(transform.position) && enteredCell != null && enteredCell.AttachTile(this))
+        {
+            homeCell = enteredCell;
+            canvas.sortingOrder = 1;
+        }
+        image.raycastTarget = true;
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        Debug.Log("tile down");
         homeCell?.DetachTile(this);
-        canvas.sortingOrder = 0;
+        canvas.sortingOrder = 2;
+        image.raycastTarget = false;
     }
 }

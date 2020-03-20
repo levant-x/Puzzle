@@ -5,12 +5,13 @@ using UnityEngine.UI;
 
 public class Gameplay : MonoBehaviour
 {
-    [SerializeField] GameObject framePrefab;
+    [SerializeField] GameObject framePrefab = null;
     GameObject tableOriginObj, serveryOriginObj;
     Sprite[] tiles;
     int[,] gameField = new int[5, 5];
     Vector3 cellSize;
     float serveryLeft, serveryRight, serveryTop, serveryBottom;
+    List<TableCell> putTogether = new List<TableCell>();
 
 
     void Start()
@@ -23,6 +24,14 @@ public class Gameplay : MonoBehaviour
         cellSize = framePrefab.GetComponent<SpriteRenderer>().bounds.size;
         for (int y = gameField.GetLength(0) - 1; y >= 0; y--) GenerateTableRow(y);
         foreach (var tile in tiles) GenerateTile(tile);
+        TableCell.onTileChanged += TableCell_OnTileChanged;
+    }
+
+    private void TableCell_OnTileChanged(TableCell cell)
+    {
+        if (cell.isTileSetCorrectly) putTogether.Add(cell);
+        else putTogether.Remove(cell);
+        if (putTogether.Count == gameField.Length) throw new System.Exception("Gameover");
     }
 
     void CalcServeryBounds()
@@ -56,11 +65,9 @@ public class Gameplay : MonoBehaviour
         tile.AddComponent<Image>().sprite = tileSprite; // to show sprite
         var canvas = tile.GetComponent<Canvas>();
         canvas.worldCamera = Camera.main;
-        canvas.sortingOrder = 2;
-
-        (tile.transform as RectTransform).sizeDelta = cellSize;     
+        canvas.sortingOrder = 1; 
         tile.transform.position = new Vector3(Random.Range(serveryLeft, serveryRight),
             Random.Range(serveryBottom, serveryTop));
-        tile.transform.SetParent(serveryOriginObj.transform);
+        (tile.transform as RectTransform).sizeDelta = cellSize;    
     }
 }
