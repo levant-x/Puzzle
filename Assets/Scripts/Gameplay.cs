@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class Gameplay : MonoBehaviour
 {
-    [SerializeField] GameObject framePrefab = null;
+    [SerializeField] GameObject framePrefab = null, tilePrefab = null;
     GameObject tableOriginObj, serveryOriginObj;
     Sprite[] tiles;
     int[,] gameField = new int[5, 5];
@@ -58,11 +58,10 @@ public class Gameplay : MonoBehaviour
     }
 
     void GenerateTile(Sprite tileSprite)
-    {        
-        var tile = new GameObject(tileSprite.name);
-        tile.AddComponent<Tile>(); // controlling script
-        tile.AddComponent<GraphicRaycaster>(); // to receive rays
-        tile.AddComponent<Image>().sprite = tileSprite; // to show sprite
+    {
+        var tile = Instantiate(tilePrefab);
+        tile.name = tileSprite.name;
+        tile.GetComponent<Image>().sprite = tileSprite; // to show sprite
         var canvas = tile.GetComponent<Canvas>();
         canvas.worldCamera = Camera.main;
         canvas.sortingOrder = 1; 
