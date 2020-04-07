@@ -6,47 +6,30 @@ using UnityEngine.UI;
 public class Gameplay : MonoBehaviour
 {
     [SerializeField] GameObject framePrefab = null, tilePrefab = null;
-    GameObject tableOriginObj, serveryOriginObj;
+    GameObject tableOriginObj, heapOriginObj;
     Sprite[] tiles;
-    int[,] gameField = new int[5, 5];
     Vector3 cellSize;
-    float serveryLeft, serveryRight, serveryTop, serveryBottom;
-    List<TableCell> putTogether = new List<TableCell>();
+    float heapAreaLeft, heapAreaRight, heapAreaTop, heapAreaBottom;
+    int rowsCount = 5, colsCount = 5;
+    List<TableCell> tilesPutTogether = new List<TableCell>();
 
 
     void Start()
     {
         tableOriginObj = GameObject.Find("TableOrigin").gameObject;
-        serveryOriginObj = GameObject.Find("ServeryOrigin").gameObject;
+        heapOriginObj = GameObject.Find("HeapOrigin").gameObject;
         tiles = Resources.LoadAll<Sprite>("Sprites/Tiles");
         CalcServeryBounds();
 
         cellSize = framePrefab.GetComponent<SpriteRenderer>().bounds.size;
-        for (int y = gameField.GetLength(0) - 1; y >= 0; y--) GenerateTableRow(y);
+        for (int y = colsCount - 1; y >= 0; y--) GenerateTableRow(y);
         foreach (var tile in tiles) GenerateTile(tile);
-        TableCell.onTileChanged += TableCell_OnTileChanged;
-    }
-
-    private void TableCell_OnTileChanged(TableCell cell)
-    {
-        if (cell.isTileSetCorrectly) putTogether.Add(cell);
-        else putTogether.Remove(cell);
-        if (putTogether.Count == gameField.Length) throw new System.Exception("Gameover");
-    }
-
-    void CalcServeryBounds()
-    {
-        var originRectT = serveryOriginObj.transform as RectTransform;
-        var originPos = originRectT.position;
-        serveryLeft = originPos.x - originRectT.sizeDelta.x / 2;
-        serveryRight = originPos.x + originRectT.sizeDelta.x / 2;
-        serveryTop = originPos.y + originRectT.sizeDelta.y / 2;
-        serveryBottom = originPos.y - originRectT.sizeDelta.y / 2;
+        TableCell.onTileChange += TableCell_OnTileChanged;
     }
 
     void GenerateTableRow(int y)
     {
-        for (int x = 0; x < gameField.GetLength(1); x++) GenerateTableCell(x, y);
+        for (int x = 0; x < colsCount; x++) GenerateTableCell(x, y);
     }
 
     void GenerateTableCell(int x, int y)
@@ -57,16 +40,33 @@ public class Gameplay : MonoBehaviour
         cell.transform.SetParent(tableOriginObj.transform);
     }
 
+    private void TableCell_OnTileChanged(TableCell cell)
+    {
+        if (cell.isTileSetCorrectly) tilesPutTogether.Add(cell);
+        else tilesPutTogether.Remove(cell);
+        if (tilesPutTogether.Count == rowsCount * colsCount) Debug.Log("Game over!");
+    }
+
+    void CalcServeryBounds()
+    {
+        var originRectT = heapOriginObj.transform as RectTransform;
+        var originPos = originRectT.position;
+        heapAreaLeft = originPos.x - originRectT.sizeDelta.x / 2;
+        heapAreaRight = originPos.x + originRectT.sizeDelta.x / 2;
+        heapAreaTop = originPos.y + originRectT.sizeDelta.y / 2;
+        heapAreaBottom = originPos.y - originRectT.sizeDelta.y / 2;
+    }
+
     void GenerateTile(Sprite tileSprite)
     {
-        var tile = Instantiate(tilePrefab);
+        var tile = Instantiate(tilePrefab, heapOriginObj.transform);
         tile.name = tileSprite.name;
-        tile.GetComponent<Image>().sprite = tileSprite; // to show sprite
-        var canvas = tile.GetComponent<Canvas>();
-        canvas.worldCamera = Camera.main;
-        canvas.sortingOrder = 1; 
-        tile.transform.position = new Vector3(Random.Range(serveryLeft, serveryRight),
-            Random.Range(serveryBottom, serveryTop));
-        (tile.transform as RectTransform).sizeDelta = cellSize;    
+        var tileSprRnr = tile.GetComponent<SpriteRenderer>();
+        tileSprRnr.sprite = tileSprite; // setting sprite
+        tile.transform.position = new Vector3(Random.Range(heapAreaLeft, heapAreaRight),
+            Random.Range(heapAreaBottom, heapAreaTop));
+        var tileSize = tileSprRnr.size;
+        var newScale = new Vector3(cellSize.x / tileSize.x, cellSize.y / tileSize.y);
+        tile.transform.localScale = newScale;
     }
 }

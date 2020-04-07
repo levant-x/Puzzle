@@ -3,56 +3,68 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class TableCell : MonoBehaviour, IPointerEnterHandler
+public class TableCell : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public static event System.Action<TableCell> onCellEnter;
-    public static event System.Action<TableCell> onTileChanged;
+    public static event System.Action<TableCell> onTileChange;
+    public static TableCell current
+    {
+        get { return currentVar; }
+        private set
+        {
+            currentVar = value;
+            onCellEnter?.Invoke(currentVar);
+        }
+    }
     public bool isOccupied
     {
-        get { return tileAttached != null; }
+        get { return contentAttached != null; }
     }
     public bool isTileSetCorrectly
     {
-        get { return tileAttached?.index == tileIndex; }
+        get { return contentAttached?.index == tileIndex; }
     }
-
     static int totalCount = 0;
     int tileIndex;
-    Tile tileAttached;
+    static TableCell currentVar;
+    IIndexedByNum contentAttached;
 
     
     void Start()
     {
         tileIndex = totalCount;
         totalCount++;
-        GetComponent<Canvas>().worldCamera = Camera.main;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!isOccupied && onCellEnter != null) onCellEnter(this);
+        if (!isOccupied) current = this;
     }
 
-    public bool AttachTile(Tile tile)
+    public void OnPointerExit(PointerEventData eventData)
     {
-        if (tileAttached != null) return false;
-        tileAttached = tile;
-        tile.transform.SetAsFirstSibling();
-        onTileChanged?.Invoke(this);
+        current = null;
+    }
+
+    public bool AttachTile(IIndexedByNum tile)
+    {
+        if (isOccupied) return false;
+        contentAttached = tile;
+        onTileChange?.Invoke(this);
         return true;
     }
 
-    public void DetachTile(Tile tile)
+    public void DetachTile(IIndexedByNum tile)
     {
-        if (!tile.Equals(tileAttached)) return;
-        tileAttached = null;
-        onTileChanged?.Invoke(this);
+        if (!tile.Equals(contentAttached)) return;
+        contentAttached = null;
+        onTileChange?.Invoke(this);
     }
 
     public override string ToString()
     {
         var result = $"{base.ToString()} for tile #{tileIndex}";
-        if (isOccupied) result = $"{result} (currently set with {tileAttached.index})";
+        if (isOccupied) result = $"{result} (currently set with {contentAttached.index})";
         return result;
     }
 }

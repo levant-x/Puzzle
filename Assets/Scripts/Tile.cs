@@ -4,12 +4,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
+public class Tile : MonoBehaviour, IBeginDragHandler, IEndDragHandler,  IDragHandler, IIndexedByNum
 {
     public int index { get; private set; }
-    Canvas canvas;
-    Image image;
-    TableCell enteredCell, homeCell;
+    SpriteRenderer sprRenderer;
+    BoxCollider2D boxColl2d;
+    TableCell enteredCell, dockCell;
     float cellBindingDist = 0.15f;
 
 
@@ -18,23 +18,37 @@ public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDown
         var indexStr = name.Replace("Tiles_", null);
         index = int.Parse(indexStr);
         TableCell.onCellEnter += TableCell_OnCellEnter;
-        canvas = GetComponent<Canvas>();
-        image = GetComponent<Image>();
+        sprRenderer = GetComponent<SpriteRenderer>();
+        boxColl2d = GetComponent<BoxCollider2D>();
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        dockCell?.DetachTile(this);
+        sprRenderer.sortingLayerName = "Tiles";
+        sprRenderer.sortingOrder = 1;
+        gameObject.layer = 2;
+        transform.SetAsFirstSibling();
     }
 
     public void OnDrag(PointerEventData data)
     {
-        var pointerWorldPos = Camera.main.ScreenToWorldPoint(data.position);
-        pointerWorldPos.z = 0;
-        if (CanBindToCell(pointerWorldPos)) SetPosition(enteredCell.transform.position);
+        var pointerWorldPos = ConvertPosition(data.position);
+        if (CloseToCellCenter(pointerWorldPos)) SetPosition(enteredCell.transform.position);
         else SetPosition(pointerWorldPos);
     }
 
-    bool CanBindToCell(Vector3 pointerPos)
+    public void OnEndDrag(PointerEventData eventData)
     {
-        if (enteredCell == null || enteredCell.isOccupied) return false;
-        var asdf = enteredCell.transform.parent.TransformPoint(pointerPos);
-        var tileToCellDist = (enteredCell.transform.position - pointerPos).magnitude;  
+        sprRenderer.sortingOrder = 0;
+        TryAttachToCell(ConvertPosition(eventData.position));
+        gameObject.layer = 0;
+    }
+
+    bool CloseToCellCenter(Vector3 pointerPos)
+    {
+        if (enteredCell == null) return false;
+        var tileToCellDist = (enteredCell.transform.position - pointerPos).magnitude;
         return tileToCellDist < cellBindingDist;
     }
 
@@ -48,20 +62,20 @@ public class Tile : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDown
         enteredCell = cell;
     }
 
-    public void OnPointerUp(PointerEventData eventData)
+    void TryAttachToCell(Vector3 position)
     {
-        if (CanBindToCell(transform.position) && enteredCell != null && enteredCell.AttachTile(this))
-        {
-            homeCell = enteredCell;
-            canvas.sortingOrder = 1;
-        }
-        image.raycastTarget = true;
+        bool isAttachedToCell = CloseToCellCenter(position) &&
+            enteredCell != null && enteredCell.AttachTile(this);
+        if (!isAttachedToCell) return;
+        sprRenderer.sortingLayerName = "Default";
+        sprRenderer.sortingOrder = 1;
+        dockCell = enteredCell;
     }
 
-    public void OnPointerDown(PointerEventData eventData)
+    Vector3 ConvertPosition(Vector3 screenPos)
     {
-        homeCell?.DetachTile(this);
-        canvas.sortingOrder = 2;
-        image.raycastTarget = false;
+        var result = Camera.main.ScreenToWorldPoint(screenPos);
+        result.z = 0;
+        return result;
     }
 }
